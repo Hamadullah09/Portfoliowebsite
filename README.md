@@ -2,6 +2,8 @@
 
 Personal portfolio website for Hamadullah showcasing experience, skills, projects, and contact details.
 
+[![Live Site](https://img.shields.io/badge/Live%20Site-hamadullah.me-0f766e?style=for-the-badge)](https://hamadullah.me)
+
 ## Features
 
 - Single-page layout with sections: Hero, About, Experience, Skills, Projects, Contact
