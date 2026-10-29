@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 export default defineConfig({
-  // Relative asset paths so dist/ works from any static host or folder
-  base: "./",
+  // Served from the root of hamadullah.me; absolute asset paths keep deep links working
+  base: "/",
   server: {
     host: "::",
     port: 8080,

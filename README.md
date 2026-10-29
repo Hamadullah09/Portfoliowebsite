@@ -41,7 +41,26 @@ npm run build    # outputs dist/
 npm run preview
 ```
 
-## Deployment
+## Deployment (CI/CD)
 
-Build and deploy the `dist/` folder to any static host. Asset paths are relative (`base: "./"`), and project pages use
-hash URLs, so no server-side rewrites are needed.
+The site is a static-assets Cloudflare Worker (`twilight-union-2ee6`) on the `hamadullah.me` custom domain,
+configured in `wrangler.jsonc`.
+
+`.github/workflows/deploy.yml` runs on every push to `main`: install → lint → typecheck → test → build →
+`wrangler deploy` → smoke test against https://hamadullah.me. Pull requests run the checks only.
+
+It needs two repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Where to find it |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create Token → "Edit Cloudflare Workers" template |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → Workers & Pages → Account ID (right-hand sidebar) |
+
+Manual deploy from a machine logged in with `wrangler login`:
+
+```bash
+npm run build
+npx wrangler deploy
+```
+
+Unknown paths fall back to the app, which renders its own 404 page; project pages use `#work/<slug>` links.

@@ -1,0 +1,12 @@
+// Deploys dist/ to the Cloudflare Worker that serves hamadullah.me.
+// npm run build && npx wrangler deploy
+{
+  "name": "twilight-union-2ee6",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Unknown paths load the app, which shows its own 404 page
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "hamadullah.me", "custom_domain": true }]
+}

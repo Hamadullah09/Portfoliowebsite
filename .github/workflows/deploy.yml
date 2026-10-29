@@ -1,0 +1,84 @@
+name: CI / Deploy
+
+# Every push to main is checked, built and deployed to hamadullah.me.
+# Pull requests run the same checks without deploying.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a production deploy half-way; superseded PR runs can go
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Cloudflare
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://hamadullah.me
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Explain missing secrets
+        if: env.HAS_TOKEN != 'true'
+        run: |
+          echo "::warning::Skipping deploy: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID under Settings → Secrets and variables → Actions."
+
+      - name: Deploy Worker (twilight-union-2ee6)
+        if: env.HAS_TOKEN == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.151.0"
+          command: deploy
+
+      - name: Smoke test
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "https://hamadullah.me/?ci=${GITHUB_SHA}" | grep -q "Hamadullah — Software Developer"; then
+              echo "hamadullah.me is serving the new build"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::hamadullah.me did not serve the new build within a minute"; exit 1
